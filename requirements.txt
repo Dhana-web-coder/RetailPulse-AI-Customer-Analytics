@@ -5,4 +5,4 @@ plotly
 matplotlib
 scikit-learn
 statsmodels
-joblib
+joblibseaborn
