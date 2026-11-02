@@ -23,11 +23,10 @@ st.write("Customer Retention and Repeat Purchase Analysis")
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 DATA_FILES = [
-    BASE_DIR / "retail_cleaned_final.csv",
+    BASE_DIR / "data" / "retailpulse_combined_with_stock_status.csv",
     BASE_DIR / "data" / "retail_cleaned_final.csv",
     BASE_DIR / "data" / "retail_customer_clean.csv"
 ]
-
 @st.cache_data
 def load_data():
     for file_path in DATA_FILES:
