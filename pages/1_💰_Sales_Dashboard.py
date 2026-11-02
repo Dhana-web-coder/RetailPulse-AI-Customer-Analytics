@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from pathlib import Path
 
 st.set_page_config(
     page_title="Sales Dashboard",
@@ -13,12 +14,17 @@ st.title("💰 RetailPulse - Sales Dashboard")
 st.write("Retail Sales Performance Analysis")
 
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+DATA_PATH = (
+    BASE_DIR
+    / "data"
+    / "retailpulse_combined_with_stock_status.csv"
+)
+
 @st.cache_data
 def load_data():
-    df = pd.read_csv(
-        "retail_cleaned_final.csv",
-        low_memory=False
-    )
+    df = pd.read_csv(DATA_PATH, low_memory=False)
 
     df["InvoiceDate"] = pd.to_datetime(
         df["InvoiceDate"],
@@ -49,6 +55,7 @@ try:
 
 except FileNotFoundError:
     st.error("Dataset file not found!")
+    st.stop()
 
 st.subheader("Key Performance Indicators")
 
