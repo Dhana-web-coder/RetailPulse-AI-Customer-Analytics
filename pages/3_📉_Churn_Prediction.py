@@ -30,16 +30,12 @@ st.write("RetailPulse - Machine Learning Dashboard")
 # --------------------------------------------------
 # 2. LOAD DATASET
 # --------------------------------------------------
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-DATA_PATH = Path(r"C:\Users\acer\Desktop\RERAILPULSE\customer_churn_data.csv")
+DATA_PATH = BASE_DIR / "customer_churn_data.csv"
 
-# Try the data folder if the file is not in project root
 if not DATA_PATH.exists():
-    DATA_PATH = (
-        Path(__file__).resolve().parent.parent
-        / "data"
-        / "customer_churn_data.csv"
-    )
+    DATA_PATH = BASE_DIR / "data" / "customer_churn_data.csv"
 
 if not DATA_PATH.exists():
     st.error("customer_churn_data.csv file not found.")
