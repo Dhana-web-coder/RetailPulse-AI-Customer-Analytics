@@ -13,15 +13,10 @@ st.title("📦 RetailPulse - Inventory Dashboard")
 st.markdown("### Product Demand & Inventory Movement Analysis")
 
 # Find dataset
-BASE_DIR = Path(r"C:\Users\acer\Desktop\RERAILPULSE")
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 files = [
-    BASE_DIR / "retailpulse_combined_with_stock_status.csv",
-    BASE_DIR / "data" / "retailpulse_combined_with_stock_status.csv",
-    BASE_DIR / "retail_cleaned_2009_2010.csv",
-    BASE_DIR / "retail_cleaned_final.csv",
-    BASE_DIR / "retail_2009_2010.csv",
-    BASE_DIR / "data" / "retail_data_1.csv"
+    BASE_DIR / "data" / "retailpulse_combined_with_stock_status.csv"
 ]
 
 file_path = next((f for f in files if f.exists()), None)
