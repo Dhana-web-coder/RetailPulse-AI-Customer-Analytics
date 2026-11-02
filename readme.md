@@ -211,7 +211,9 @@ Data Analytics | Information Technology
 
 
 GitHub: https://github.com/Dhana-web-coder
+## 📊 Dashboard Screenshot
 
+![Sales Dashboard](screenshots/sales_dashboard.png)
 
 
 \---
