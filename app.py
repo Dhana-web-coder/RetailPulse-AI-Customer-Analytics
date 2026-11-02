@@ -15,6 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent
 # ==========================================
 
 DATA_FILES = [
+    BASE_DIR / "data" / "retailpulse_combined_with_stock_status.csv",
     BASE_DIR / "data" / "retailpulse_combined.csv",
     BASE_DIR / "data" / "retail_missing_fixed.csv",
     BASE_DIR / "data" / "retail_customer_clean.csv",
