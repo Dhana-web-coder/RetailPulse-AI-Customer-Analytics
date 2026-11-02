@@ -5,8 +5,8 @@ from pathlib import Path
 st.title("🌍 Country Analysis")
 st.subheader("Retail Sales by Country")
 
-BASE_DIR = Path(r"C:\Users\acer\Desktop\RERAILPULSE")
-DATA_PATH = BASE_DIR / "retail_cleaned_final.csv"
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_PATH = BASE_DIR / "data" / "retailpulse_combined_with_stock_status.csv"
 
 if not DATA_PATH.exists():
     st.error("Dataset file not found!")
