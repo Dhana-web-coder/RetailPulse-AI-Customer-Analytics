@@ -1,0 +1,812 @@
+import streamlit as st
+import pandas as pd
+
+st.set_page_config(
+    page_title="Customer Dashboard",
+    page_icon="👥",
+    layout="wide"
+)
+
+st.title("RetailPulse - Customer Dashboard")
+st.write("Customer Segmentation using RFM Analysis")
+
+df = pd.read_csv("retail_cleaned_final.csv", low_memory=False)
+
+df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"], errors="coerce")
+df["Customer ID"] = pd.to_numeric(df["Customer ID"], errors="coerce")
+
+df = df.dropna(subset=["Customer ID", "InvoiceDate"])
+
+df = df[
+    (df["Quantity"] > 0) &
+    (df["Price"] > 0)
+].copy()
+
+df["Sales"] = df["Quantity"] * df["Price"]
+
+reference_date = df["InvoiceDate"].max() + pd.Timedelta(days=1)
+
+rfm = df.groupby("Customer ID").agg(
+    Recency=("InvoiceDate", lambda x: (reference_date - x.max()).days),
+    Frequency=("Invoice", "nunique"),
+    Monetary=("Sales", "sum")
+).reset_index()
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+
+# Select RFM features
+X = rfm[["Recency", "Frequency", "Monetary"]].copy()
+
+# Handle skewed customer spending
+X["Monetary"] = X["Monetary"].clip(
+    upper=X["Monetary"].quantile(0.99)
+)
+
+# Scale features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Train K-Means model
+kmeans = KMeans(
+    n_clusters=4,
+    random_state=42,
+    n_init=10
+)
+
+rfm["Customer Segment"] = kmeans.fit_predict(X_scaled)
+
+# Display results
+st.subheader("🤖 ML Customer Segmentation")
+
+st.write("Customers are grouped into 4 clusters using K-Means.")
+
+st.bar_chart(
+    rfm["Customer Segment"].value_counts().sort_index()
+)
+
+st.dataframe(
+    rfm[
+        [
+            "Customer ID",
+            "Recency",
+            "Frequency",
+            "Monetary",
+            "Customer Segment"
+        ]
+    ],
+    use_container_width=True
+)
+# New vs Returning Customers
+st.subheader("🆕 New vs Returning Customers")
+
+# Find each customer's first purchase date
+customer_first_purchase = (
+    df.groupby("Customer ID")["InvoiceDate"]
+    .min()
+    .reset_index()
+)
+
+customer_first_purchase.columns = [
+    "Customer ID",
+    "First Purchase Date"
+]
+
+# Count unique invoices for each customer
+customer_orders = (
+    df.groupby("Customer ID")["Invoice"]
+    .nunique()
+    .reset_index()
+)
+
+customer_orders.columns = [
+    "Customer ID",
+    "Total Orders"
+]
+
+# Combine customer information
+customer_analysis = customer_first_purchase.merge(
+    customer_orders,
+    on="Customer ID",
+    how="left"
+)
+
+# Classify customers based on order history
+customer_analysis["Customer Type"] = customer_analysis[
+    "Total Orders"
+].apply(
+    lambda orders: (
+        "New Customer" if orders == 1
+        else "Returning Customer"
+    )
+)
+
+# Calculate customer counts
+new_customers = (
+    customer_analysis["Customer Type"] == "New Customer"
+).sum()
+
+returning_customers = (
+    customer_analysis["Customer Type"] == "Returning Customer"
+).sum()
+
+total_customers = len(customer_analysis)
+
+returning_percentage = (
+    returning_customers / total_customers * 100
+    if total_customers > 0 else 0
+)
+
+# Display KPI cards
+col1, col2, col3 = st.columns(3)
+
+col1.metric("New Customers", f"{new_customers:,}")
+col2.metric("Returning Customers", f"{returning_customers:,}")
+col3.metric("Returning Customer %", f"{returning_percentage:.2f}%")
+
+# Display donut chart
+st.write("### Customer Type Distribution")
+
+customer_type_counts = (
+    customer_analysis["Customer Type"]
+    .value_counts()
+)
+
+st.plotly_chart(
+    __import__("plotly.express", fromlist=["px"]).pie(
+        values=customer_type_counts.values,
+        names=customer_type_counts.index,
+        title="New vs Returning Customers",
+        hole=0.5
+    ),
+    use_container_width=True
+)
+
+# Display customer details
+st.write("### Customer Type Details")
+
+st.dataframe(
+    customer_analysis.sort_values(
+        "Total Orders", ascending=False
+    ),
+    use_container_width=True
+)
+st.subheader("Customer KPIs")
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric("Total Customers", f"{rfm['Customer ID'].nunique():,}")
+col2.metric("Total Orders", f"{rfm['Frequency'].sum():,}")
+col3.metric("Total Customer Sales", f"£{rfm['Monetary'].sum():,.2f}")
+
+st.subheader("Top 10 Customers")
+
+top_customers = rfm.sort_values(
+    "Monetary", ascending=False
+).head(10)
+
+st.dataframe(top_customers, use_container_width=True)
+
+st.subheader("Customer Purchase Frequency")
+
+frequency_data = (
+    rfm["Frequency"]
+    .value_counts()
+    .sort_index()
+    .head(20)
+)
+
+st.bar_chart(frequency_data)
+
+st.subheader("Top 20 Customers by Spending")
+
+spending_data = (
+    rfm.nlargest(20, "Monetary")
+    .set_index("Customer ID")["Monetary"]
+)
+
+st.bar_chart(spending_data)
+# Monthly Active Customers
+st.subheader("📅 Monthly Active Customers")
+
+# Create month column
+monthly_df = df.copy()
+
+monthly_df["Month"] = (
+    monthly_df["InvoiceDate"]
+    .dt.to_period("M")
+    .astype(str)
+)
+
+# Count unique customers in each month
+monthly_customers = (
+    monthly_df.groupby("Month")["Customer ID"]
+    .nunique()
+    .reset_index()
+)
+
+monthly_customers.columns = [
+    "Month",
+    "Active Customers"
+]
+
+# Display monthly active customers chart
+st.write("### Monthly Active Customer Trend")
+
+st.line_chart(
+    monthly_customers.set_index("Month")["Active Customers"]
+)
+
+# Find the most active month
+if not monthly_customers.empty:
+    most_active = monthly_customers.loc[
+        monthly_customers["Active Customers"].idxmax()
+    ]
+
+    st.metric(
+        "Most Active Month",
+        most_active["Month"],
+        f"{int(most_active['Active Customers']):,} customers"
+    )
+
+# Display monthly customer details
+st.write("### Monthly Customer Details")
+
+st.dataframe(
+    monthly_customers.sort_values("Month"),
+    use_container_width=True,
+    hide_index=True
+)
+# Customer Retention Analysis
+st.subheader("🔄 Customer Retention Analysis")
+
+retention_df = df.copy()
+
+# Extract month from invoice date
+retention_df["Month"] = (
+    retention_df["InvoiceDate"]
+    .dt.to_period("M")
+)
+
+# Find each customer's first purchase month
+retention_df["First Purchase Month"] = (
+    retention_df.groupby("Customer ID")["Month"]
+    .transform("min")
+)
+
+# Identify customers who purchased after their first month
+retention_df["Customer Type"] = (
+    retention_df["Month"] == retention_df["First Purchase Month"]
+).map({
+    True: "First-Month Customer",
+    False: "Returning Customer"
+})
+
+# Count unique returning customers by month
+retention_data = (
+    retention_df[
+        retention_df["Customer Type"] == "Returning Customer"
+    ]
+    .groupby("Month")["Customer ID"]
+    .nunique()
+    .reset_index()
+)
+
+retention_data.columns = [
+    "Month",
+    "Returning Customers"
+]
+
+retention_data["Month"] = (
+    retention_data["Month"].astype(str)
+)
+
+# Display returning customer trend
+st.write("### Monthly Returning Customer Trend")
+
+if not retention_data.empty:
+    st.line_chart(
+        retention_data.set_index("Month")["Returning Customers"]
+    )
+
+    st.dataframe(
+        retention_data,
+        use_container_width=True,
+        hide_index=True
+    )
+else:
+    st.info(
+        "No returning customer records found in the available dataset."
+    )
+    # RFM Customer Analysis
+st.subheader("🎯 RFM Customer Analysis")
+
+rfm_analysis = rfm.copy()
+
+# Assign RFM scores from 1 to 5
+# Higher Recency score means a more recent purchase
+rfm_analysis["R_Score"] = pd.qcut(
+    rfm_analysis["Recency"].rank(method="first"),
+    5,
+    labels=[5, 4, 3, 2, 1]
+).astype(int)
+
+rfm_analysis["F_Score"] = pd.qcut(
+    rfm_analysis["Frequency"].rank(method="first"),
+    5,
+    labels=[1, 2, 3, 4, 5]
+).astype(int)
+
+rfm_analysis["M_Score"] = pd.qcut(
+    rfm_analysis["Monetary"].rank(method="first"),
+    5,
+    labels=[1, 2, 3, 4, 5]
+).astype(int)
+
+# Calculate total RFM score
+rfm_analysis["RFM Score"] = (
+    rfm_analysis["R_Score"]
+    + rfm_analysis["F_Score"]
+    + rfm_analysis["M_Score"]
+)
+
+# Assign easy-to-understand customer segments
+def assign_segment(row):
+    if (
+        row["R_Score"] >= 4
+        and row["F_Score"] >= 4
+        and row["M_Score"] >= 4
+    ):
+        return "Best Customers"
+    elif row["F_Score"] >= 4 and row["R_Score"] >= 3:
+        return "Loyal Customers"
+    elif row["R_Score"] >= 4 and row["F_Score"] <= 2:
+        return "Potential Loyalists"
+    elif row["R_Score"] <= 2 and row["F_Score"] >= 3:
+        return "At-Risk Customers"
+    else:
+        return "Other Customers"
+
+rfm_analysis["RFM Segment"] = rfm_analysis.apply(
+    assign_segment,
+    axis=1
+)
+
+# Display customer segment counts
+st.write("### Customer Segment Distribution")
+
+segment_counts = (
+    rfm_analysis["RFM Segment"]
+    .value_counts()
+)
+
+st.bar_chart(segment_counts)
+
+# Display segment details
+st.write("### RFM Customer Details")
+
+st.dataframe(
+    rfm_analysis[
+        [
+            "Customer ID",
+            "Recency",
+            "Frequency",
+            "Monetary",
+            "R_Score",
+            "F_Score",
+            "M_Score",
+            "RFM Score",
+            "RFM Segment"
+        ]
+    ].sort_values("RFM Score", ascending=False),
+    use_container_width=True,
+    hide_index=True
+)
+st.success("Customer Dashboard loaded successfully!")
+# ==========================================
+# CUSTOMER CHURN RISK ANALYSIS
+# ==========================================
+
+import os
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+
+st.header("⚠️ Customer Churn Risk Analysis")
+
+churn_file = "customer_churn_data.csv"
+
+if os.path.exists(churn_file):
+
+    churn_df = pd.read_csv(churn_file)
+
+    required_columns = [
+        "Customer ID",
+        "Recency",
+        "Frequency",
+        "Monetary",
+        "Churn"
+    ]
+
+    if all(col in churn_df.columns for col in required_columns):
+
+        # Prepare training data
+        X = churn_df[["Recency", "Frequency", "Monetary"]]
+        y = churn_df["Churn"]
+
+        # Train the model
+        X_train, X_test, y_train, y_test = train_test_split(
+            X,
+            y,
+            test_size=0.2,
+            random_state=42,
+            stratify=y
+        )
+
+        churn_model = RandomForestClassifier(
+            n_estimators=100,
+            random_state=42,
+            class_weight="balanced"
+        )
+
+        churn_model.fit(X_train, y_train)
+
+        # Prepare customer RFM data
+        customer_data = rfm[
+            ["Recency", "Frequency", "Monetary"]
+        ].copy()
+
+        customer_data = customer_data.replace(
+            [float("inf"), float("-inf")], pd.NA
+        ).dropna()
+
+        # Predict churn probability
+        customer_data["Churn Risk %"] = (
+            churn_model.predict_proba(
+                customer_data[["Recency", "Frequency", "Monetary"]]
+            )[:, 1] * 100
+        )
+
+        # Add Customer ID
+        customer_data["Customer ID"] = customer_data.index
+
+        # Classify risk level
+        customer_data["Risk Level"] = pd.cut(
+            customer_data["Churn Risk %"],
+            bins=[-1, 30, 60, 100],
+            labels=["Low Risk", "Medium Risk", "High Risk"]
+        )
+
+        # KPI metrics
+        high_risk = (
+            customer_data["Risk Level"] == "High Risk"
+        ).sum()
+
+        medium_risk = (
+            customer_data["Risk Level"] == "Medium Risk"
+        ).sum()
+
+        low_risk = (
+            customer_data["Risk Level"] == "Low Risk"
+        ).sum()
+
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric("🔴 High Risk Customers", int(high_risk))
+        col2.metric("🟠 Medium Risk Customers", int(medium_risk))
+        col3.metric("🟢 Low Risk Customers", int(low_risk))
+
+        # Risk distribution chart
+        st.subheader("Churn Risk Distribution")
+
+        risk_counts = (
+            customer_data["Risk Level"]
+            .value_counts()
+            .reindex(
+                ["High Risk", "Medium Risk", "Low Risk"],
+                fill_value=0
+            )
+        )
+
+        st.bar_chart(risk_counts)
+
+        # High-risk customers table
+        st.subheader("🔴 High Risk Customer Details")
+
+        high_risk_df = customer_data[
+            customer_data["Risk Level"] == "High Risk"
+        ].sort_values("Churn Risk %", ascending=False)
+
+        st.dataframe(
+            high_risk_df[
+                [
+                    "Customer ID",
+                    "Recency",
+                    "Frequency",
+                    "Monetary",
+                    "Churn Risk %",
+                    "Risk Level"
+                ]
+            ],
+            use_container_width=True
+        )
+
+        # Download report
+        csv_data = customer_data.to_csv(index=False).encode("utf-8")
+
+        st.download_button(
+            label="📥 Download Churn Risk Report",
+            data=csv_data,
+            file_name="customer_churn_risk_report.csv",
+            mime="text/csv"
+        )
+
+    else:
+        st.error(
+            "Required columns are missing in customer_churn_data.csv"
+        )
+
+else:
+    st.warning("customer_churn_data.csv file not found.")
+# ==========================================
+# CUSTOMER LIFETIME VALUE (CLV) ANALYSIS
+# ==========================================
+
+st.header("💰 Customer Lifetime Value Analysis")
+
+# Calculate historical customer value
+clv_df = rfm[
+    ["Recency", "Frequency", "Monetary"]
+].copy()
+
+clv_df["Customer ID"] = clv_df.index
+
+# Historical average sales per order
+clv_df["Average Order Value"] = (
+    clv_df["Monetary"] / clv_df["Frequency"].replace(0, pd.NA)
+)
+
+# Historical sales value
+clv_df["Historical Customer Value"] = clv_df["Monetary"]
+
+# KPI calculations
+total_customer_value = clv_df["Historical Customer Value"].sum()
+
+average_customer_value = clv_df["Historical Customer Value"].mean()
+
+highest_value = clv_df["Historical Customer Value"].max()
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric(
+    "Total Customer Sales",
+    f"£{total_customer_value:,.2f}"
+)
+
+col2.metric(
+    "Average Customer Value",
+    f"£{average_customer_value:,.2f}"
+)
+
+col3.metric(
+    "Highest Customer Value",
+    f"£{highest_value:,.2f}"
+)
+
+# Top 10 customers
+st.subheader("🏆 Top 10 Customers by Historical Value")
+
+top_clv = clv_df.sort_values(
+    "Historical Customer Value",
+    ascending=False
+).head(10)
+
+st.bar_chart(
+    top_clv.set_index("Customer ID")[
+        "Historical Customer Value"
+    ]
+)
+
+st.dataframe(
+    top_clv,
+    use_container_width=True
+)
+
+# Download report
+clv_csv = clv_df.to_csv(index=False).encode("utf-8")
+
+st.download_button(
+    "📥 Download Customer Value Report",
+    data=clv_csv,
+    file_name="customer_value_report.csv",
+    mime="text/csv"
+)
+# ==========================================
+# CUSTOMER PURCHASE BEHAVIOR ANALYSIS
+# ==========================================
+
+st.header("🛍️ Customer Purchase Behavior Analysis")
+
+# Prepare purchase behavior data
+behavior_df = rfm[
+    ["Recency", "Frequency", "Monetary"]
+].copy()
+
+behavior_df["Customer ID"] = behavior_df.index
+
+# Average Order Value
+total_orders = behavior_df["Frequency"].sum()
+total_sales = behavior_df["Monetary"].sum()
+
+average_order_value = (
+    total_sales / total_orders if total_orders > 0 else 0
+)
+
+# Average orders per customer
+average_frequency = behavior_df["Frequency"].mean()
+
+# Repeat purchase rate
+repeat_customers = (
+    behavior_df["Frequency"] > 1
+).sum()
+
+total_customers = len(behavior_df)
+
+repeat_purchase_rate = (
+    repeat_customers / total_customers * 100
+    if total_customers > 0 else 0
+)
+
+# KPI cards
+col1, col2, col3 = st.columns(3)
+
+col1.metric(
+    "Average Order Value",
+    f"£{average_order_value:,.2f}"
+)
+
+col2.metric(
+    "Average Orders per Customer",
+    f"{average_frequency:.2f}"
+)
+
+col3.metric(
+    "Repeat Purchase Rate",
+    f"{repeat_purchase_rate:.2f}%"
+)
+
+# Purchase frequency distribution
+st.subheader("📊 Purchase Frequency Distribution")
+
+frequency_counts = (
+    behavior_df["Frequency"]
+    .value_counts()
+    .sort_index()
+)
+
+st.bar_chart(frequency_counts)
+
+# Customer spending distribution
+st.subheader("💰 Customer Spending Distribution")
+
+st.bar_chart(
+    behavior_df.set_index("Customer ID")["Monetary"]
+)
+
+# Repeat purchase summary
+st.subheader("🔁 Repeat Purchase Summary")
+
+summary_df = pd.DataFrame({
+    "Customer Type": [
+        "Repeat Customers",
+        "Single-Order Customers"
+    ],
+    "Customer Count": [
+        int(repeat_customers),
+        int(total_customers - repeat_customers)
+    ]
+})
+
+st.dataframe(summary_df, use_container_width=True)
+
+# Download report
+behavior_csv = behavior_df.to_csv(index=False).encode("utf-8")
+
+st.download_button(
+    "📥 Download Purchase Behavior Report",
+    data=behavior_csv,
+    file_name="customer_purchase_behavior.csv",
+    mime="text/csv"
+)
+# ==========================================
+# CUSTOMER INSIGHTS & BUSINESS RECOMMENDATIONS
+# ==========================================
+
+st.header("💡 Customer Insights & Business Recommendations")
+
+# Use existing RFM dataframe
+insights_df = rfm[
+    ["Recency", "Frequency", "Monetary"]
+].copy()
+
+insights_df["Customer ID"] = insights_df.index
+
+# Calculate overall metrics
+total_customers = len(insights_df)
+
+average_spending = (
+    insights_df["Monetary"].mean()
+    if total_customers > 0 else 0
+)
+
+# Identify customer groups
+high_value_threshold = insights_df["Monetary"].quantile(0.75)
+
+high_value_customers = insights_df[
+    insights_df["Monetary"] >= high_value_threshold
+]
+
+at_risk_customers = insights_df[
+    insights_df["Recency"] > insights_df["Recency"].quantile(0.75)
+]
+
+repeat_customers = insights_df[
+    insights_df["Frequency"] > 1
+]
+
+# Display insights
+col1, col2, col3 = st.columns(3)
+
+col1.metric(
+    "High-Value Customers",
+    len(high_value_customers)
+)
+
+col2.metric(
+    "Potential At-Risk Customers",
+    len(at_risk_customers)
+)
+
+col3.metric(
+    "Repeat Customers",
+    len(repeat_customers)
+)
+
+st.write(
+    f"Average historical spending per customer: £{average_spending:,.2f}"
+)
+
+# Business recommendations
+st.subheader("📌 Recommended Business Actions")
+
+if len(at_risk_customers) > 0:
+    st.warning(
+        "Customer Retention: Consider sending re-engagement emails "
+        "or personalized offers to customers who have not purchased recently."
+    )
+
+if len(high_value_customers) > 0:
+    st.success(
+        "Customer Loyalty: Consider loyalty rewards or exclusive offers "
+        "for customers with high historical spending."
+    )
+
+if len(repeat_customers) > 0:
+    st.info(
+        "Repeat Purchases: Consider product recommendations and "
+        "personalized campaigns to encourage another purchase."
+    )
+
+st.caption(
+    "Note: These recommendations are based on historical retail data. "
+    "They are suggestions, not guaranteed business outcomes."
+)
+
+# View at-risk customer details
+st.subheader("⚠️ Potential At-Risk Customer Details")
+
+st.dataframe(
+    at_risk_customers.sort_values(
+        "Recency", ascending=False
+    ).head(20),
+    use_container_width=True
+)

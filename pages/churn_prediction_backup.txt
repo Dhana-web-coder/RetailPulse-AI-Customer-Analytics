@@ -1,0 +1,600 @@
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from pathlib import Path
+
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix
+)
+
+# =====================================
+# PAGE CONFIGURATION
+# =====================================
+
+st.set_page_config(
+    page_title="Customer Churn Prediction",
+    page_icon="📉",
+    layout="wide"
+)
+
+# =====================================
+# DASHBOARD TITLE
+# =====================================
+
+st.title("📉 Customer Churn Prediction")
+st.write("RetailPulse - Machine Learning Dashboard")
+
+# =====================================
+# LOAD DATASET
+# =====================================
+
+st.header("Load Customer Data")
+
+possible_paths = [
+    Path("customer_churn_data.csv"),
+    Path("data/customer_churn_data.csv"),
+    Path(__file__).resolve().parent / "customer_churn_data.csv",
+    Path(__file__).resolve().parent.parent / "data/customer_churn_data.csv"
+]
+
+data_path = next(
+    (path for path in possible_paths if path.exists()),
+    None
+)
+
+if data_path is None:
+    st.error(
+        "customer_churn_data.csv file not found. "
+        "Please place it in the project folder or data folder."
+    )
+    st.stop()
+
+df = pd.read_csv(data_path)
+
+required_columns = [
+    "Recency",
+    "Frequency",
+    "Monetary",
+    "Churn"
+]
+
+missing_columns = [
+    col for col in required_columns
+    if col not in df.columns
+]
+
+if missing_columns:
+    st.error(f"Missing columns: {missing_columns}")
+    st.stop()
+
+df = df[required_columns].copy()
+
+df = df.dropna()
+
+if df.empty:
+    st.error("Dataset is empty after removing missing values.")
+    st.stop()
+
+    # =====================================
+# EXTRA FEATURE 1: CUSTOMER CHURN RATE
+# =====================================
+
+st.header("Customer Churn Overview")
+
+# Calculate customer class counts
+churn_counts = df["Churn"].value_counts().sort_index()
+
+total_customers = len(df)
+
+churn_customers = int((df["Churn"] == 1).sum())
+non_churn_customers = int((df["Churn"] == 0).sum())
+
+churn_rate = (
+    churn_customers / total_customers * 100
+    if total_customers > 0 else 0
+)
+
+non_churn_rate = (
+    non_churn_customers / total_customers * 100
+    if total_customers > 0 else 0
+)
+
+# Display KPI cards
+col1, col2, col3 = st.columns(3)
+
+col1.metric(
+    "Total Customers",
+    f"{total_customers:,}"
+)
+
+col2.metric(
+    "Churn Customers",
+    f"{churn_customers:,}"
+)
+
+col3.metric(
+    "Overall Churn Rate",
+    f"{churn_rate:.2f}%"
+)
+
+# Display customer class distribution
+st.subheader("Churn vs Non-Churn Distribution")
+
+class_df = pd.DataFrame({
+    "Customer Class": ["Not Churn", "Churn"],
+    "Customer Count": [
+        non_churn_customers,
+        churn_customers
+    ]
+})
+
+fig, ax = plt.subplots(figsize=(7, 4))
+
+sns.barplot(
+    data=class_df,
+    x="Customer Class",
+    y="Customer Count",
+    hue="Customer Class",
+    legend=False,
+    ax=ax
+)
+
+ax.set_title("Customer Churn Class Distribution")
+ax.set_xlabel("Customer Class")
+ax.set_ylabel("Number of Customers")
+
+st.pyplot(fig)
+plt.close(fig)
+
+st.caption(
+    "Overall churn rate is calculated from the available dataset. "
+    "It is not the same as the model's predicted churn rate."
+)
+
+# =====================================
+# PREPARE FEATURES AND TARGET
+# =====================================
+
+X = df[["Recency", "Frequency", "Monetary"]]
+y = df["Churn"]
+
+if y.nunique() != 2:
+    st.error("Churn column must contain two classes: 0 and 1.")
+    st.stop()
+
+if y.value_counts().min() < 2:
+    st.error("Each churn class needs at least two records.")
+    st.stop()
+
+# =====================================
+# SPLIT DATA
+# =====================================
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+# =====================================
+# TRAIN MAIN MODEL
+# =====================================
+
+model = RandomForestClassifier(
+    n_estimators=100,
+    random_state=42,
+    class_weight="balanced"
+)
+
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+
+# =====================================
+# ROC CURVE & AUC SCORE
+# =====================================
+
+model.fit(X_train, y_train)
+st.header("8. ROC Curve & AUC Score")
+
+from sklearn.metrics import roc_curve, roc_auc_score
+
+churn_class_index = list(model.classes_).index(1)
+
+y_probability = model.predict_proba(X_test)[:, churn_class_index]
+
+fpr, tpr, thresholds = roc_curve(
+    y_test,
+    y_probability,
+    pos_label=1
+)
+
+auc_score = roc_auc_score(y_test, y_probability)
+
+st.metric("ROC-AUC Score", f"{auc_score:.3f}")
+
+fig, ax = plt.subplots(figsize=(7, 5))
+
+ax.plot(fpr, tpr, label=f"ROC Curve (AUC = {auc_score:.3f})")
+ax.plot([0, 1], [0, 1], linestyle="--", label="Random Classifier")
+
+ax.set_xlabel("False Positive Rate")
+ax.set_ylabel("True Positive Rate")
+ax.set_title("Customer Churn ROC Curve")
+ax.legend()
+
+st.pyplot(fig)
+plt.close(fig)
+
+# =====================================
+# 1. MODEL PERFORMANCE
+# =====================================
+
+st.header("1. Model Performance")
+
+accuracy = accuracy_score(y_test, y_pred)
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric(
+    "Model Accuracy",
+    f"{accuracy * 100:.2f}%"
+)
+
+col2.metric(
+    "Training Customers",
+    len(X_train)
+)
+
+col3.metric(
+    "Testing Customers",
+    len(X_test)
+)
+
+st.info(
+    "Accuracy shows the percentage of correct predictions. "
+    "Precision and Recall are also important for churn prediction."
+)
+
+# =====================================
+# 2. CLASSIFICATION REPORT
+# =====================================
+
+st.header("2. Classification Report")
+
+report = classification_report(
+    y_test,
+    y_pred,
+    output_dict=True,
+    zero_division=0
+)
+
+report_df = pd.DataFrame(report).transpose()
+
+st.dataframe(
+    report_df.round(3),
+    use_container_width=True
+)
+
+# =====================================
+# CHURN CLASS PERFORMANCE
+# =====================================
+
+st.subheader("Churn Class Performance")
+
+churn_key = "1" if "1" in report else "1.0"
+
+if churn_key in report:
+    churn_metrics = report[churn_key]
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "Churn Precision",
+        f"{churn_metrics['precision']:.2f}"
+    )
+
+    col2.metric(
+        "Churn Recall",
+        f"{churn_metrics['recall']:.2f}"
+    )
+
+    col3.metric(
+        "Churn F1-Score",
+        f"{churn_metrics['f1-score']:.2f}"
+    )
+
+# =====================================
+# 3. CONFUSION MATRIX
+# =====================================
+
+st.header("3. Confusion Matrix")
+
+cm = confusion_matrix(
+    y_test,
+    y_pred,
+    labels=[0, 1]
+)
+
+cm_df = pd.DataFrame(
+    cm,
+    index=["Actual Not Churn", "Actual Churn"],
+    columns=["Predicted Not Churn", "Predicted Churn"]
+)
+
+st.dataframe(
+    cm_df,
+    use_container_width=True
+)
+
+fig, ax = plt.subplots(figsize=(6, 4))
+
+sns.heatmap(
+    cm,
+    annot=True,
+    fmt="d",
+    cmap="Blues",
+    xticklabels=["Not Churn", "Churn"],
+    yticklabels=["Not Churn", "Churn"],
+    ax=ax
+)
+
+ax.set_xlabel("Predicted")
+ax.set_ylabel("Actual")
+ax.set_title("Customer Churn Confusion Matrix")
+
+st.pyplot(fig)
+plt.close(fig)
+
+st.caption(
+    "Rows show actual classes. Columns show predicted classes."
+)
+
+# =====================================
+# 4. CUSTOMER CHURN PREDICTIONS
+# =====================================
+
+st.header("4. Customer Churn Predictions")
+
+results = X_test.copy()
+
+results["Actual Churn"] = y_test
+results["Predicted Churn"] = y_pred
+
+results["Churn Probability (%)"] = (
+    model.predict_proba(X_test)[:, 1] * 100
+).round(2)
+
+results["Churn Status"] = results["Predicted Churn"].map({
+    0: "Not Churn",
+    1: "Churn Risk"
+})
+
+# =====================================
+# EXTRA FEATURE 2: CHURN RISK LEVEL
+# =====================================
+
+st.subheader("Churn Risk Level Distribution")
+
+# Assign risk levels based on churn probability
+def assign_risk(probability):
+    if probability >= 70:
+        return "High Risk"
+    elif probability >= 40:
+        return "Medium Risk"
+    else:
+        return "Low Risk"
+
+results["Risk Level"] = results["Churn Probability (%)"].apply(
+    assign_risk
+)
+
+# Count customers in each risk category
+risk_order = ["High Risk", "Medium Risk", "Low Risk"]
+
+risk_counts = (
+    results["Risk Level"]
+    .value_counts()
+    .reindex(risk_order, fill_value=0)
+)
+
+# Display risk level KPI cards
+col1, col2, col3 = st.columns(3)
+
+col1.metric("High Risk Customers", int(risk_counts["High Risk"]))
+col2.metric("Medium Risk Customers", int(risk_counts["Medium Risk"]))
+col3.metric("Low Risk Customers", int(risk_counts["Low Risk"]))
+
+# Display risk distribution chart
+risk_df = risk_counts.rename_axis("Risk Level").reset_index(
+    name="Customer Count"
+)
+
+fig, ax = plt.subplots(figsize=(7, 4))
+
+sns.barplot(
+    data=risk_df,
+    x="Risk Level",
+    y="Customer Count",
+    hue="Risk Level",
+    legend=False,
+    ax=ax
+)
+
+ax.set_title("Customer Churn Risk Distribution")
+ax.set_xlabel("Risk Level")
+ax.set_ylabel("Number of Customers")
+
+st.pyplot(fig)
+plt.close(fig)
+st.dataframe(
+    results.reset_index(drop=True),
+    use_container_width=True
+)
+
+# =====================================
+# 5. PREDICT CUSTOMER CHURN
+# =====================================
+
+st.header("5. Predict Customer Churn")
+
+st.write("Enter customer details to predict churn risk.")
+
+with st.form("churn_prediction_form"):
+
+    recency = st.number_input(
+        "Recency (Days Since Last Purchase)",
+        min_value=0,
+        value=30
+    )
+
+    frequency = st.number_input(
+        "Frequency (Number of Purchases)",
+        min_value=1,
+        value=5
+    )
+
+    monetary = st.number_input(
+        "Monetary (Total Purchase Amount)",
+        min_value=0.0,
+        value=1000.0
+    )
+
+    submit = st.form_submit_button("Predict Churn")
+
+if submit:
+
+    customer_data = pd.DataFrame({
+        "Recency": [recency],
+        "Frequency": [frequency],
+        "Monetary": [monetary]
+    })
+
+    prediction = model.predict(customer_data)[0]
+
+    churn_class_index = list(model.classes_).index(1)
+
+    probability = (
+        model.predict_proba(customer_data)[0][churn_class_index]
+        * 100
+    )
+
+    st.metric(
+        "Churn Risk Probability",
+        f"{probability:.2f}%"
+    )
+
+    if prediction == 1:
+        st.error("⚠️ Customer is at Risk of Churning")
+    else:
+        st.success("✅ Customer is Predicted as Not Churning")
+
+# =====================================
+# 6. RANDOM FOREST MODEL COMPARISON
+# =====================================
+
+st.header("6. Random Forest Model Comparison")
+
+st.write(
+    "Compare different Random Forest configurations "
+    "using the same training and testing data."
+)
+
+models = {
+    "Random Forest - 100 Trees": RandomForestClassifier(
+        n_estimators=100,
+        random_state=42,
+        class_weight="balanced"
+    ),
+
+    "Random Forest - 200 Trees": RandomForestClassifier(
+        n_estimators=200,
+        random_state=42,
+        class_weight="balanced"
+    ),
+
+    "Random Forest - Depth 10": RandomForestClassifier(
+        n_estimators=100,
+        max_depth=10,
+        random_state=42,
+        class_weight="balanced"
+    )
+}
+
+comparison_results = []
+
+for model_name, comparison_model in models.items():
+
+    comparison_model.fit(X_train, y_train)
+
+    comparison_pred = comparison_model.predict(X_test)
+
+    
+
+    comparison_results.append({
+        "Model": model_name,
+        "Accuracy": accuracy_score(
+            y_test,
+            comparison_pred
+        ),
+        "Precision": classification_report(
+            y_test,
+            comparison_pred,
+            output_dict=True,
+            zero_division=0
+        )["1"]["precision"],
+        "Recall": classification_report(
+            y_test,
+            comparison_pred,
+            output_dict=True,
+            zero_division=0
+        )["1"]["recall"],
+        "F1-Score": classification_report(
+            y_test,
+            comparison_pred,
+            output_dict=True,
+            zero_division=0
+        )["1"]["f1-score"]
+    })
+
+comparison_df = pd.DataFrame(comparison_results)
+
+st.dataframe(
+    comparison_df.round(3),
+    use_container_width=True
+)
+
+best_model_row = comparison_df.loc[
+    comparison_df["F1-Score"].idxmax()
+]
+
+st.subheader("Best Model Based on F1-Score")
+
+col1, col2 = st.columns(2)
+
+col1.metric(
+    "Best Model",
+    best_model_row["Model"]
+)
+
+col2.metric(
+    "Best F1-Score",
+    f"{best_model_row['F1-Score']:.3f}"
+)
+
+st.caption(
+    "Model comparison uses the same test set. "
+    "Choose the model based on the project's evaluation goals, "
+    "not accuracy alone."
+)
+
+st.success(
+    "Customer Churn Prediction Dashboard loaded successfully!"
+)

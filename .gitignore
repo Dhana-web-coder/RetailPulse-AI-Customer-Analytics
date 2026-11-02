@@ -1,0 +1,72 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.streamlit/secrets.toml
+# MLflow tracking files
+mlruns/
+mlflow_tracking/
+
+# Large datasets
+data/*.csv
+
+# Model files
+*.pkl
+*.joblib
+*.skops
+
+# Python cache
+.pytest_cache/
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Secrets
+.env
+.streamlit/secrets.toml
+
+# MLflow
+mlruns/
+mlflow_tracking/
+mlflow.db
+
+# Dataset files
+data/*.csv
+retail_*.csv
+cleaned_retail_data.csv
+customer_churn_data.csv
+daily_sales.csv
+
+# Temporary files
+*.log
+*.tmp
+# Security
+.env
+.streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# MLflow
+mlruns/
+mlflow_tracking/
+mlflow.db
+
+# Datasets and generated CSV files
+data/
+*.csv
+
+# Model files
+*.pkl
+*.joblib
+*.skops
+
+# Temporary folders
+RetailPulse-AI-Customer-Analytics/
+__pycache__/
