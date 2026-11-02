@@ -224,4 +224,5 @@ RetailPulse – Turning Retail Data into Smart Business Decisions.
 ## 👥 Customer Dashboard
 
 ![Customer Dashboard](screenshots/customer_dashboard.png)
+seaborn
 

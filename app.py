@@ -362,9 +362,8 @@ selected_page = st.session_state.get("selected_page", page)
 st.divider()
 
 if selected_page == "🏠 Home":
-    st.success(
-        "Welcome! Use the navigation menu to explore RetailPulse."
-    )
+    st.success("Welcome! Use the navigation menu to explore RetailPulse.")
+
 elif selected_page == "📊 Executive Dashboard":
     st.header("📊 Executive Dashboard")
     st.write("Business overview and key performance indicators.")
@@ -373,6 +372,7 @@ elif selected_page == "📊 Executive Dashboard":
             sales_df["InvoiceDate"].dt.to_period("M").astype(str)
         )["TotalSales"].sum()
     )
+
 elif selected_page == "💰 Sales Analysis":
     st.header("💰 Sales Analysis")
     st.line_chart(
@@ -380,41 +380,34 @@ elif selected_page == "💰 Sales Analysis":
             sales_df["InvoiceDate"].dt.date
         )["TotalSales"].sum()
     )
+
 elif selected_page == "👥 Customer Analytics":
     st.header("👥 Customer Analytics")
     st.write(f"Unique customers: {total_customers:,}")
     st.write(f"Total orders: {total_orders:,}")
+
 elif selected_page == "🎯 Customer Segmentation":
     st.header("🎯 Customer Segmentation")
 
-    rfm_path = Path(r"C:\Users\acer\Desktop\RERAILPULSE\rfm_results.csv")
+    rfm_path = BASE_DIR / "rfm_results.csv"
 
     if rfm_path.exists():
         rfm_df = pd.read_csv(rfm_path)
-
-        st.subheader("RFM Customer Segmentation")
         st.metric("Total Customers", f"{len(rfm_df):,}")
-
-        if "Segment" in rfm_df.columns:
-            st.subheader("Customer Segments")
-            st.dataframe(
-                rfm_df["Segment"].value_counts().reset_index(),
-                use_container_width=True
-            )
-
-        st.subheader("RFM Results")
         st.dataframe(rfm_df, use_container_width=True)
     else:
         st.error("rfm_results.csv file not found.")
+
 elif selected_page == "🤖 Churn Prediction":
-    churn_file = Path(__file__).resolve().parent / "pages" / "3_📉_Churn_Prediction.py"
+    churn_file = BASE_DIR / "pages" / "3_📉_Churn_Prediction.py"
 
     if churn_file.exists():
         exec(compile(churn_file.read_text(encoding="utf-8"), str(churn_file), "exec"))
     else:
         st.error("Churn Prediction file not found.")
+
 elif selected_page == "📦 Inventory Analysis":
-    inventory_file = Path(__file__).resolve().parent / "pages" / "4_📦_Inventory_Dashboard.py"
+    inventory_file = BASE_DIR / "pages" / "4_📦_Inventory_Dashboard.py"
 
     if inventory_file.exists():
         exec(compile(inventory_file.read_text(encoding="utf-8"), str(inventory_file), "exec"))
@@ -422,36 +415,18 @@ elif selected_page == "📦 Inventory Analysis":
         st.error("Inventory Dashboard file not found.")
 
 elif selected_page == "🔮 Demand Forecasting":
-
-    forecast_file = (
-        BASE_DIR / "pages" / "8_📈_Forecast_Dashboard.py"
-    )
+    forecast_file = BASE_DIR / "pages" / "8_📈_Forecast_Dashboard.py"
 
     if forecast_file.exists():
-        exec(
-            compile(
-                forecast_file.read_text(encoding="utf-8"),
-                str(forecast_file),
-                "exec"
-            )
-        )
+        exec(compile(forecast_file.read_text(encoding="utf-8"), str(forecast_file), "exec"))
     else:
         st.error("Forecast Dashboard file not found.")
 
 elif selected_page == "🌍 Country Analysis":
-
-    country_file = (
-        BASE_DIR / "pages" / "9_🌍_Country_Analysis.py"
-    )
+    country_file = BASE_DIR / "pages" / "9_🌍_Country_Analysis.py"
 
     if country_file.exists():
-        exec(
-            compile(
-                country_file.read_text(encoding="utf-8"),
-                str(country_file),
-                "exec"
-            )
-        )
+        exec(compile(country_file.read_text(encoding="utf-8"), str(country_file), "exec"))
     else:
         st.error("Country Analysis file not found.")
 # ==========================================
