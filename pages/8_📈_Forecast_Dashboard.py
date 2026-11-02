@@ -30,10 +30,9 @@ st.divider()
 # 2. LOAD DATASET
 # ==========================================
 
-BASE_DIR = Path(r"C:\Users\acer\Desktop\RERAILPULSE")
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-DATA_PATH = BASE_DIR / "retail_cleaned_final.csv"
-
+DATA_PATH = BASE_DIR / "data" / "retailpulse_combined_with_stock_status.csv"
 # Alternative location if the file is inside data/
 if not DATA_PATH.exists():
     DATA_PATH = BASE_DIR / "data" / "retail_cleaned_final.csv"
