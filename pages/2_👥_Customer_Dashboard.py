@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from pathlib import Path
 
 st.set_page_config(
     page_title="Customer Dashboard",
@@ -10,10 +11,11 @@ st.set_page_config(
 st.title("👥 RetailPulse - Customer Dashboard")
 st.write("Customer Segmentation using RFM Analysis")
 
-df = pd.read_csv(
-    "data/retail_customer_clean.csv",
-    low_memory=False
-)
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+DATA_PATH = BASE_DIR / "data" / "retailpulse_combined_with_stock_status.csv"
+
+df = pd.read_csv(DATA_PATH, low_memory=False)
 
 df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"], errors="coerce")
 df["Customer ID"] = pd.to_numeric(df["Customer ID"], errors="coerce")
