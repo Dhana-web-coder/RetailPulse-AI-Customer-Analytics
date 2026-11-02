@@ -161,10 +161,12 @@ st.divider()
 st.subheader("📈 Historical Sales-Based Inventory Analysis")
 
 sales_candidates = [
+    BASE_DIR / "data" / "retailpulse_combined_with_stock_status.csv",
     BASE_DIR / "data" / "retail_customer_clean.csv",
     BASE_DIR / "data" / "retail_cleaned_final.csv",
     BASE_DIR / "retail_cleaned_final.csv"
 ]
+
 sales_file = next((p for p in sales_candidates if p.exists()), None)
 sales_df = None
 
