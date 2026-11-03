@@ -302,61 +302,6 @@ with c7:
 with c8:
     show_kpi("Low-Demand Products", f"{low_demand:,}", "⚠️")
 
-
-# Quick navigation
-st.markdown(
-    '<p class="section-title">🚀 Quick Navigation</p>',
-    unsafe_allow_html=True
-)
-
-st.caption(
-    "Choose a section below to explore your retail business insights."
-)
-
-nav1, nav2, nav3, nav4 = st.columns(4)
-
-with nav1:
-    if st.button("📊 Executive Dashboard"):
-        st.session_state["selected_page"] = "📊 Executive Dashboard"
-        st.rerun()
-
-with nav2:
-    if st.button("💰 Sales Analysis"):
-        st.session_state["selected_page"] = "💰 Sales Analysis"
-        st.rerun()
-
-with nav3:
-    if st.button("👥 Customer Analytics"):
-        st.session_state["selected_page"] = "👥 Customer Analytics"
-        st.rerun()
-
-with nav4:
-    if st.button("🎯 Customer Segmentation"):
-        st.session_state["selected_page"] = "🎯 Customer Segmentation"
-        st.rerun()
-
-nav5, nav6, nav7, nav8 = st.columns(4)
-with nav5:
-    if st.button("🤖\nChurn Prediction"):
-        st.session_state["selected_page"] = "🤖 Churn Prediction"
-        st.rerun()
-
-with nav6:
-    if st.button("📦\nInventory Analysis"):
-        st.session_state["selected_page"] = "📦 Inventory Analysis"
-        st.rerun()
-
-with nav7:
-    if st.button("🔮\nDemand Forecasting"):
-        st.session_state["selected_page"] = "🔮 Demand Forecasting"
-        st.rerun()
-
-with nav8:
-    if st.button("🌍\nCountry Analysis"):
-        st.session_state["selected_page"] = "🌍 Country Analysis"
-        st.rerun()
-
-
 # Display selected page
 selected_page = st.session_state.get("selected_page", page)
 st.divider()
