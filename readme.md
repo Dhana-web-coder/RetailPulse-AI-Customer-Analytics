@@ -1,6 +1,15 @@
 RetailPulse – AI-Powered Customer Analytics and Forecasting Platform
 
 
+🚀 RetailPulse – AI-Powered Customer Analytics and Forecasting Platform
+
+🌐 Live Application
+
+""Streamlit App" (https://static.streamlit.io/badges/streamlit_badge_black_white.svg)" (https://retailpulse-ai-customer-analytics-juzybjf7zuzdyqsu3cavho.streamlit.app/)
+
+"👉 Click Here to Open RetailPulse Live Dashboard" (https://retailpulse-ai-customer-analytics-juzybjf7zuzdyqsu3cavho.streamlit.app/)
+
+Explore the live application to view sales analytics, customer segmentation, churn prediction, demand forecasting, and inventory management dashboards.
 
 Project Overview
 
