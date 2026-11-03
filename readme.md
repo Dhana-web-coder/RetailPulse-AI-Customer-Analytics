@@ -211,12 +211,10 @@ Data Analytics | Information Technology
 
 
 GitHub: https://github.com/Dhana-web-coder
-## 📊 Dashboard Screenshot
+## RetailPulse Dashboard
 
-![Sales Dashboard](screenshots/sales_dashboard.png)
+![RetailPulse Home Page](screenshots/home_page.png)
 
-
-\---
 
 
 
