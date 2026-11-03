@@ -11,12 +11,7 @@ st.subheader("Retail Sales by Country")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-PROJECT_DIR = BASE_DIR / "retailpulse-ai-customer-analytics"
-
-DATA_PATH = (
-    PROJECT_DIR / "data" /
-    "retailpulse_combined_with_stock_status.csv"
-)
+DATA_PATH = BASE_DIR / "data" / "retailpulse_combined_with_stock_status.csv"
 
 if not DATA_PATH.exists():
     st.error("Dataset file not found!")
@@ -103,6 +98,11 @@ sales_display["TotalSales"] = sales_display["TotalSales"].map(
 )
 
 st.dataframe(sales_display, width="stretch")
+c1, c2, c3 = st.columns(3)
+
+c1.metric("Total Countries", country_summary["Country"].nunique())
+c2.metric("Total Sales", f"{country_summary['TotalSales'].sum():,.2f}")
+c3.metric("Total Orders", f"{country_summary['TotalOrders'].sum():,}")
 
 st.divider()
 
