@@ -5,14 +5,34 @@ from pathlib import Path
 st.title("🌍 Country Analysis")
 st.subheader("Retail Sales by Country")
 
+# ==========================================
+# DATASET PATH FIX
+# ==========================================
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 DATA_PATH = BASE_DIR / "data" / "retailpulse_combined_with_stock_status.csv"
 
 if not DATA_PATH.exists():
+
     st.error("Dataset file not found!")
+
+    st.write("Current application directory:")
+    st.code(str(BASE_DIR))
+
+    st.write("Expected dataset location:")
+    st.code(str(DATA_PATH))
+
+    st.write("Available files in project:")
+
+    for file in BASE_DIR.rglob("*.csv"):
+        st.write(str(file.relative_to(BASE_DIR)))
+
     st.stop()
 
 df = pd.read_csv(DATA_PATH)
+
+st.success("Dataset loaded successfully!")
 df.columns = df.columns.str.strip()
 
 df["Quantity"] = pd.to_numeric(df["Quantity"], errors="coerce")
