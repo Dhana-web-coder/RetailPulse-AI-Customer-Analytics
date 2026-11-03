@@ -211,16 +211,6 @@ Data Analytics | Information Technology
 
 
 GitHub: https://github.com/Dhana-web-coder
-## RetailPulse Dashboard
 
-![RetailPulse Home Page](screenshots/home_page.png)
-
-
-
-
-RetailPulse – Turning Retail Data into Smart Business Decisions.
-## 👥 Customer Dashboard
-
-![Customer Dashboard](screenshots/customer_dashboard.png)
 seaborn
 
