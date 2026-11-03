@@ -103,11 +103,6 @@ sales_display["TotalSales"] = sales_display["TotalSales"].map(
 )
 
 st.dataframe(sales_display, width="stretch")
-c1, c2, c3 = st.columns(3)
-
-c1.metric("Total Countries", country_summary["Country"].nunique())
-c2.metric("Total Sales", f"{country_summary['TotalSales'].sum():,.2f}")
-c3.metric("Total Orders", f"{country_summary['TotalOrders'].sum():,}")
 
 st.divider()
 
