@@ -334,7 +334,7 @@ elif selected_page == "👥 Customer Analytics":
 elif selected_page == "🎯 Customer Segmentation":
     st.header("🎯 Customer Segmentation")
 
-    rfm_path = BASE_DIR / "retailpulse-ai-customer-analytics" / "rfm_results.csv"
+    rfm_path = BASE_DIR / "rfm_results.csv"
 
     if rfm_path.exists():
         rfm_df = pd.read_csv(rfm_path)
